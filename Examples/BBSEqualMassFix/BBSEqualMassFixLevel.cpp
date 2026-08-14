@@ -23,7 +23,7 @@
 #include "ADMQuantitiesExtraction.hpp"
 
 // For tag cells
-#include "BosonChiPunctureExtractionTaggingCriterion.hpp"
+#include "ComplexPhiAndChiExtractionTaggingCriterion.hpp"
 
 // Problem specific includes
 #include "BinaryEqualMassFix.hpp"

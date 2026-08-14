@@ -40,6 +40,11 @@
 #include "NoetherCharge.hpp"
 #include "SmallDataIO.hpp"
 
+// For point interpolation (relative-phase diagnostic)
+#include "InterpolationQuery.hpp"
+#include <array>
+#include <cmath>
+
 // For Chombo grid functions
 #include "AMRReductions.hpp"
 
@@ -334,6 +339,44 @@ void BBSEqualMassFixLevel::specificPostTimeStep()
         bool write_star_coords = at_level_timestep_multiple(coarsest_level);
         m_st_amr.m_star_tracker.execute_tracking(m_time, m_restart_time, m_dt,
                                                  write_star_coords);
+
+        if (write_star_coords && m_p.number_of_stars == 2)
+        {
+            const auto &coords =
+                m_st_amr.m_star_tracker.get_star_coords();
+
+            std::array<double, 2> x_pts = {coords[0][0], coords[1][0]};
+            std::array<double, 2> y_pts = {coords[0][1], coords[1][1]};
+            std::array<double, 2> z_pts = {coords[0][2], coords[1][2]};
+            std::array<double, 2> phi_Re_vals{};
+            std::array<double, 2> phi_Im_vals{};
+
+            InterpolationQuery query(2);
+            query.setCoords(0, x_pts.data())
+                .setCoords(1, y_pts.data())
+                .setCoords(2, z_pts.data())
+                .addComp(c_phi_Re, phi_Re_vals.data())
+                .addComp(c_phi_Im, phi_Im_vals.data());
+            m_gr_amr.m_interpolator->interp(query);
+
+            double arg1 = std::atan2(phi_Im_vals[0], phi_Re_vals[0]);
+            double arg2 = std::atan2(phi_Im_vals[1], phi_Re_vals[1]);
+            constexpr double two_pi = 2.0 * M_PI;
+            double dphi = std::fmod(arg1 - arg2, two_pi);
+            if (dphi < 0.0)
+                dphi += two_pi;
+
+            bool first_step = (m_time == m_dt);
+            SmallDataIO phase_file("relative_phase", m_dt, m_time,
+                                   m_restart_time, SmallDataIO::APPEND,
+                                   first_step);
+            phase_file.remove_duplicate_time_data();
+            if (m_time == 0.0)
+            {
+                phase_file.write_header_line({"relative_phase"});
+            }
+            phase_file.write_time_data_line({dphi});
+        }
     }
 
 #ifdef USE_AHFINDER

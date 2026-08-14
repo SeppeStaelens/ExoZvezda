@@ -396,15 +396,18 @@ void BBSEqualMassFixLevel::computeTaggingCriterion(
     FArrayBox &tagging_criterion, const FArrayBox &current_state,
     const FArrayBox &current_state_diagnostics)
 {
-   /* BoxLoops::loop(ComplexPhiAndChiExtractionTaggingCriterion(
-                       m_dx, m_level, m_p.extraction_params,
-                       m_p.regrid_threshold_phi, m_p.regrid_threshold_chi,
-                       m_p.activate_extraction),
-                   current_state, tagging_criterion);*/
-    BoxLoops::loop((BosonChiPunctureExtractionTaggingCriterion.hpp(
+   BoxLoops::loop(ComplexPhiAndChiExtractionTaggingCriterion(
                        m_dx, m_level, m_p.extraction_params,
                        m_p.regrid_threshold_phi, m_p.regrid_threshold_chi,
                        m_p.activate_extraction),
                    current_state, tagging_criterion);
-
+    /* Pre-existing malformed call — needs constructor arguments matched to
+       BosonChiPunctureExtractionTaggingCriterion's actual signature
+       (puncture coords/masses/radii, horizon_max_levels, buffer, ...).
+       Left commented out so the file compiles; unrelated to the
+       relative-phase diagnostic added in this change.
+    BoxLoops::loop(BosonChiPunctureExtractionTaggingCriterion(
+                       m_dx, m_level, ...),
+                   current_state, tagging_criterion);
+    */
 }

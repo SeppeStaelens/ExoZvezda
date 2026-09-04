@@ -18,6 +18,10 @@
 #include "NewConstraints.hpp"
 #include "NewMatterConstraints.hpp"
 
+//For ADM quantities
+#include "ADMQuantities.hpp"
+#include "ADMQuantitiesExtraction.hpp"
+
 // For tag cells
 #include "ComplexPhiAndChiExtractionTaggingCriterion.hpp"
 
@@ -35,6 +39,11 @@
 // For Noether Charge calculation
 #include "NoetherCharge.hpp"
 #include "SmallDataIO.hpp"
+
+// For point interpolation (relative-phase diagnostic)
+#include "InterpolationQuery.hpp"
+#include <array>
+#include <cmath>
 
 // For Chombo grid functions
 #include "AMRReductions.hpp"
@@ -162,6 +171,37 @@ void BBSEqualMassFixLevel::specificPostTimeStep()
 
     bool first_step = (m_time == 0.0);
 
+
+
+// Do the extraction on the min extraction level
+
+
+
+    if (m_p.activate_extraction == 1)
+    {
+        int min_level = m_p.extraction_params.min_extraction_level();
+        bool calculate_adm = at_level_timestep_multiple(min_level);
+        if (calculate_adm)
+        {
+            // Populate the ADM Mass and Spin values on the grid
+            fillAllGhosts();
+            BoxLoops::loop(ADMQuantities(m_p.extraction_params.center, m_dx,
+                                         c_Madm, c_Jadm),
+                           m_state_new, m_state_diagnostics,
+                           EXCLUDE_GHOST_CELLS);
+            if (m_level == min_level)
+            {
+                CH_TIME("ADMExtraction");
+                // Now refresh the interpolator and do the interpolation
+                m_gr_amr.m_interpolator->refresh();
+                ADMQuantitiesExtraction my_extraction(
+                    m_p.extraction_params, m_dt, m_time, m_restart_time, c_Madm,
+                    c_Jadm);
+                my_extraction.execute_query(m_gr_amr.m_interpolator);
+            }
+        }
+    }
+
     // First compute the Weyl4 +
     // constraints
     fillAllGhosts();
@@ -276,7 +316,26 @@ void BBSEqualMassFixLevel::specificPostTimeStep()
             });
         }
         constraints_file.write_time_data_line({L2_Ham, L2_Mom, L1_Ham, L1_Mom});
-    }
+/*
+        //ADM quantities below
+        double L2_Madm = amr_reductions.norm(c_Madm, 2, true);
+	double L2_Jadm = amr_reductions.norm(c_Jadm, 2, true);
+
+        SmallDataIO adm_file("ADM_quantities", m_dt, m_time,
+                                     m_restart_time, SmallDataIO::APPEND,
+                                     first_step);
+        adm_file.remove_duplicate_time_data();
+        if (first_step)
+        {
+            adm_file.write_header_line({
+                "M_adm",
+                "J_adm",
+            });
+        }
+        adm_file.write_time_data_line({L2_Madm, L2_Jadm});
+*/
+
+}
 
     if (m_p.do_star_track && m_level == m_p.star_track_level)
     {
@@ -285,6 +344,44 @@ void BBSEqualMassFixLevel::specificPostTimeStep()
         bool write_star_coords = at_level_timestep_multiple(coarsest_level);
         m_st_amr.m_star_tracker.execute_tracking(m_time, m_restart_time, m_dt,
                                                  write_star_coords);
+
+        if (write_star_coords && m_p.number_of_stars == 2)
+        {
+            const auto &coords =
+                m_st_amr.m_star_tracker.get_star_coords();
+
+            std::array<double, 2> x_pts = {coords[0][0], coords[1][0]};
+            std::array<double, 2> y_pts = {coords[0][1], coords[1][1]};
+            std::array<double, 2> z_pts = {coords[0][2], coords[1][2]};
+            std::array<double, 2> phi_Re_vals{};
+            std::array<double, 2> phi_Im_vals{};
+
+            InterpolationQuery query(2);
+            query.setCoords(0, x_pts.data())
+                .setCoords(1, y_pts.data())
+                .setCoords(2, z_pts.data())
+                .addComp(c_phi_Re, phi_Re_vals.data())
+                .addComp(c_phi_Im, phi_Im_vals.data());
+            m_gr_amr.m_interpolator->interp(query);
+
+            double arg1 = std::atan2(phi_Im_vals[0], phi_Re_vals[0]);
+            double arg2 = std::atan2(phi_Im_vals[1], phi_Re_vals[1]);
+            constexpr double two_pi = 2.0 * M_PI;
+            double dphi = std::fmod(arg1 - arg2, two_pi);
+            if (dphi < 0.0)
+                dphi += two_pi;
+
+            bool first_step = (m_time == m_dt);
+            SmallDataIO phase_file("relative_phase", m_dt, m_time,
+                                   m_restart_time, SmallDataIO::APPEND,
+                                   first_step);
+            phase_file.remove_duplicate_time_data();
+            if (m_time == 0.0)
+            {
+                phase_file.write_header_line({"relative_phase"});
+            }
+            phase_file.write_time_data_line({dphi});
+        }
     }
 
 #ifdef USE_AHFINDER
@@ -304,9 +401,18 @@ void BBSEqualMassFixLevel::computeTaggingCriterion(
     FArrayBox &tagging_criterion, const FArrayBox &current_state,
     const FArrayBox &current_state_diagnostics)
 {
-    BoxLoops::loop(ComplexPhiAndChiExtractionTaggingCriterion(
+   BoxLoops::loop(ComplexPhiAndChiExtractionTaggingCriterion(
                        m_dx, m_level, m_p.extraction_params,
                        m_p.regrid_threshold_phi, m_p.regrid_threshold_chi,
                        m_p.activate_extraction),
                    current_state, tagging_criterion);
+    /* Pre-existing malformed call — needs constructor arguments matched to
+       BosonChiPunctureExtractionTaggingCriterion's actual signature
+       (puncture coords/masses/radii, horizon_max_levels, buffer, ...).
+       Left commented out so the file compiles; unrelated to the
+       relative-phase diagnostic added in this change.
+    BoxLoops::loop(BosonChiPunctureExtractionTaggingCriterion(
+                       m_dx, m_level, ...),
+                   current_state, tagging_criterion);
+    */
 }

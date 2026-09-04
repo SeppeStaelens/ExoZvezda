@@ -33,7 +33,7 @@ class StarTracker
     double m_width_B;                       // width for fitting around star B
     std::string
         m_fitting_direction; // along which direction to fit (x or y or z)
-
+    std::string m_star_centres_filename;
     // saved pointer to external interpolator
     AMRInterpolator<Lagrange<4>> *m_interpolator;
 
@@ -50,7 +50,8 @@ class StarTracker
                                  &a_initial_star_centres,
                              int a_star_points, double a_star_track_width_A,
                              double a_star_track_width_B,
-                             std::string a_fitting_direction)
+                             std::string a_fitting_direction,
+			     std::string a_star_centres_filename = "StarCentres")
     {
         m_num_stars = a_number_of_stars;
         m_points = a_star_points;
@@ -64,6 +65,7 @@ class StarTracker
         m_width_A = a_star_track_width_A;
         m_width_B = a_star_track_width_B;
         m_fitting_direction = a_fitting_direction;
+	m_star_centres_filename = a_star_centres_filename;
 
         m_star_coords = a_initial_star_centres;
     }

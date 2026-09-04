@@ -30,3 +30,8 @@ src_dirs := $(GRCHOMBO_SOURCE)/utils \
             $(EXOZVEZDA_SOURCE)/TaggingCriteria 
 
 include $(CHOMBO_HOME)/mk/Make.test
+
+# --- ADD THIS AT THE VERY BOTTOM OF THE MAKEFILE ---
+# Chombo populates 'src_files' inside 'Make.test'. We intercept it here:
+src_files := $(filter-out $(GRCHOMBO_SOURCE)/utils/StarTracker.cpp, $(src_files))
+# ----------------------------------------------------

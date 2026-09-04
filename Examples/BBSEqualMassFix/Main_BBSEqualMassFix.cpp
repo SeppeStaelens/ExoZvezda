@@ -44,7 +44,8 @@ int runGRChombo(int argc, char *argv[])
             {sim_params.positionA, sim_params.positionB},
             sim_params.star_points, sim_params.star_track_width_A,
             sim_params.star_track_width_B,
-            sim_params.star_track_direction_of_motion);
+            sim_params.star_track_direction_of_motion,
+	    sim_params.star_centres_filename);
     }
 
     DefaultLevelFactory<BBSEqualMassFixLevel> boson_star_level_fact(st_amr,

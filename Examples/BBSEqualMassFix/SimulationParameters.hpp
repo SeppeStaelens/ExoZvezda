@@ -113,6 +113,8 @@ class SimulationParameters : public SimulationParametersBase
         pp.load("star_track_width_B", star_track_width_B, 3.);
         pp.load("direction_of_motion", star_track_direction_of_motion);
         pp.load("star_track_level", star_track_level, 5);
+	pp.load("star_centres_filename", star_centres_filename);
+	star_centres_filename = data_path + star_centres_filename;
 
 #ifdef USE_AHFINDER
         pp.load("AH_1_initial_guess", AH_1_initial_guess,
@@ -151,6 +153,7 @@ class SimulationParameters : public SimulationParametersBase
     double star_track_width_A;
     double star_track_width_B;
     std::string star_track_direction_of_motion;
+    std::string star_centres_filename;
     int star_track_level;
 
     std::array<double, CH_SPACEDIM> positionA, positionB;

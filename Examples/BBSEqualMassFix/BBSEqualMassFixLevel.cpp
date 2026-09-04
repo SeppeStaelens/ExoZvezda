@@ -218,7 +218,9 @@ void BBSEqualMassFixLevel::specificPostTimeStep()
         {
             // Compute volume weighted Noether charge integral
             double noether_charge = amr_reductions.sum(c_N);
-            SmallDataIO noether_charge_file("NoetherCharge", m_dt, m_time,
+            std::string noether_charge_filename =
+                m_p.data_path + "NoetherCharge";
+	    SmallDataIO noether_charge_file(noether_charge_filename, m_dt, m_time,
                                             m_restart_time, SmallDataIO::APPEND,
                                             first_step);
             noether_charge_file.remove_duplicate_time_data();
@@ -231,7 +233,8 @@ void BBSEqualMassFixLevel::specificPostTimeStep()
 
         // Compute the maximum of mod_phi and write it to a file
         double mod_phi_max = amr_reductions.max(c_mod_phi);
-        SmallDataIO mod_phi_max_file("mod_phi_max", m_dt, m_time,
+	std::string mod_phi_max_filename = m_p.data_path + "mod_phi_max";
+        SmallDataIO mod_phi_max_file(mod_phi_max_filename, m_dt, m_time,
                                      m_restart_time, SmallDataIO::APPEND,
                                      first_step);
         mod_phi_max_file.remove_duplicate_time_data();
@@ -243,7 +246,8 @@ void BBSEqualMassFixLevel::specificPostTimeStep()
 
         // Compute the min of chi and write it to a file
         double min_chi = amr_reductions_ev.min(c_chi);
-        SmallDataIO min_chi_file("min_chi", m_dt, m_time, m_restart_time,
+	std::string min_chi_filename = m_p.data_path + "min_chi";
+        SmallDataIO min_chi_file(min_chi_filename, m_dt, m_time, m_restart_time,
                                  SmallDataIO::APPEND, first_step);
         min_chi_file.remove_duplicate_time_data();
         if (m_time == 0.)
@@ -257,7 +261,8 @@ void BBSEqualMassFixLevel::specificPostTimeStep()
         double L2_Mom = amr_reductions.norm(Interval(c_Mom1, c_Mom3), 2, true);
         double L1_Ham = amr_reductions.norm(c_Ham, 1, true);
         double L1_Mom = amr_reductions.norm(Interval(c_Mom1, c_Mom3), 1, true);
-        SmallDataIO constraints_file("constraint_norms", m_dt, m_time,
+	std::string constraint_norms_filename = m_p.data_path + "constraint_norms";
+        SmallDataIO constraints_file(constraint_norms_filename, m_dt, m_time,
                                      m_restart_time, SmallDataIO::APPEND,
                                      first_step);
         constraints_file.remove_duplicate_time_data();

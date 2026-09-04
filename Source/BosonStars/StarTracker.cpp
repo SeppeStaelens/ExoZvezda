@@ -361,7 +361,7 @@ void StarTracker::read_in_star_coords(int a_int_step, double a_current_time)
 {
     bool first_step = false;
     double dt = (a_current_time / a_int_step);
-    SmallDataIO star_file("StarCentres", dt, a_current_time, a_current_time,
+    SmallDataIO star_file(m_star_centres_filename, dt, a_current_time, a_current_time,
                           SmallDataIO::APPEND, first_step);
 
     // NB need to give the get function an empty vector to fill
@@ -429,7 +429,7 @@ void StarTracker::set_initial_star_coords()
     double dt = 1.; // doesn't matter
     double time = 0.;
     double restart_time = 0.;
-    SmallDataIO star_centre_file("StarCentres", dt, time, restart_time,
+    SmallDataIO star_centre_file(m_star_centres_filename, dt, time, restart_time,
                                  SmallDataIO::APPEND, first_step);
     std::vector<std::string> header1_strings(CH_SPACEDIM * m_num_stars);
     for (int ipuncture = 0; ipuncture < m_num_stars; ipuncture++)
@@ -456,7 +456,7 @@ void StarTracker::execute_tracking(double a_time, double a_restart_time,
     if (write_data)
     {
         bool first_step = false;
-        SmallDataIO star_file("StarCentres", a_dt, a_time, a_restart_time,
+        SmallDataIO star_file(m_star_centres_filename, a_dt, a_time, a_restart_time,
                               SmallDataIO::APPEND, first_step);
 
         // use a vector for the write out

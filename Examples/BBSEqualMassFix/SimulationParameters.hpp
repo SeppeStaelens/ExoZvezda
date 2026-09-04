@@ -113,6 +113,7 @@ class SimulationParameters : public SimulationParametersBase
         pp.load("star_track_width_B", star_track_width_B, 3.);
         pp.load("direction_of_motion", star_track_direction_of_motion);
         pp.load("star_track_level", star_track_level, 5);
+        pp.load("write_relative_phase", write_relative_phase, false);
 	pp.load("star_centres_filename", star_centres_filename);
 	star_centres_filename = data_path + star_centres_filename;
 
@@ -131,6 +132,14 @@ class SimulationParameters : public SimulationParametersBase
 
         // Do we want to calculate and write the Noether Charge to a file
         pp.load("calculate_noether_charge", calculate_noether_charge, false);
+        pp.load("activate_ADM_extraction", activate_ADM_extraction, false);
+        if (activate_ADM_extraction && activate_extraction == 0)
+        {
+            MayDay::Error(
+                "At the moment, ADM extraction is only possible with "
+                "Weyl extraction enabled! Turning off ADM extraction.");
+            activate_ADM_extraction = false;
+        }
     }
 
     // Tagging thresholds
@@ -145,6 +154,7 @@ class SimulationParameters : public SimulationParametersBase
 
     // Do we want to write the Noether Charge to a file
     bool calculate_noether_charge;
+    bool activate_ADM_extraction;
 
     // For tracking
     bool do_star_track;
@@ -155,6 +165,7 @@ class SimulationParameters : public SimulationParametersBase
     std::string star_track_direction_of_motion;
     std::string star_centres_filename;
     int star_track_level;
+    bool write_relative_phase;
 
     std::array<double, CH_SPACEDIM> positionA, positionB;
 

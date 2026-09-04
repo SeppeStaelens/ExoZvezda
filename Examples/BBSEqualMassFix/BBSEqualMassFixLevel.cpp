@@ -171,37 +171,6 @@ void BBSEqualMassFixLevel::specificPostTimeStep()
 
     bool first_step = (m_time == 0.0);
 
-
-
-// Do the extraction on the min extraction level
-
-
-
-    if (m_p.activate_extraction == 1)
-    {
-        int min_level = m_p.extraction_params.min_extraction_level();
-        bool calculate_adm = at_level_timestep_multiple(min_level);
-        if (calculate_adm)
-        {
-            // Populate the ADM Mass and Spin values on the grid
-            fillAllGhosts();
-            BoxLoops::loop(ADMQuantities(m_p.extraction_params.center, m_dx,
-                                         c_Madm, c_Jadm),
-                           m_state_new, m_state_diagnostics,
-                           EXCLUDE_GHOST_CELLS);
-            if (m_level == min_level)
-            {
-                CH_TIME("ADMExtraction");
-                // Now refresh the interpolator and do the interpolation
-                m_gr_amr.m_interpolator->refresh();
-                ADMQuantitiesExtraction my_extraction(
-                    m_p.extraction_params, m_dt, m_time, m_restart_time, c_Madm,
-                    c_Jadm);
-                my_extraction.execute_query(m_gr_amr.m_interpolator);
-            }
-        }
-    }
-
     // First compute the Weyl4 +
     // constraints
     fillAllGhosts();
@@ -241,6 +210,30 @@ void BBSEqualMassFixLevel::specificPostTimeStep()
             WeylExtraction gw_extraction(m_p.extraction_params, m_dt, m_time,
                                          first_step, m_restart_time);
             gw_extraction.execute_query(m_gr_amr.m_interpolator);
+
+            if (m_p.activate_ADM_extraction)
+            {
+                if (m_verbosity)
+                {
+                    pout() << "BBSEqualMassFixLevel::specificPostTimeStep:"
+                            " Extracting ADM quantities."
+                        << endl;
+                }
+                // Populate the ADM Mass and Spin values on the grid
+                fillAllGhosts();
+                BoxLoops::loop(ADMQuantities(m_p.extraction_params.center, m_dx,
+                                            c_Madm, c_Jadm),
+                            m_state_new, m_state_diagnostics,
+                            EXCLUDE_GHOST_CELLS);
+
+                CH_TIME("ADMExtraction");
+                // Now refresh the interpolator and do the interpolation
+                m_gr_amr.m_interpolator->refresh();
+                ADMQuantitiesExtraction adm_extraction(
+                    m_p.extraction_params, m_dt, m_time, m_restart_time, c_Madm,
+                    c_Jadm);
+                adm_extraction.execute_query(m_gr_amr.m_interpolator);
+            }
         }
     }
 
@@ -316,26 +309,8 @@ void BBSEqualMassFixLevel::specificPostTimeStep()
             });
         }
         constraints_file.write_time_data_line({L2_Ham, L2_Mom, L1_Ham, L1_Mom});
-/*
-        //ADM quantities below
-        double L2_Madm = amr_reductions.norm(c_Madm, 2, true);
-	double L2_Jadm = amr_reductions.norm(c_Jadm, 2, true);
 
-        SmallDataIO adm_file("ADM_quantities", m_dt, m_time,
-                                     m_restart_time, SmallDataIO::APPEND,
-                                     first_step);
-        adm_file.remove_duplicate_time_data();
-        if (first_step)
-        {
-            adm_file.write_header_line({
-                "M_adm",
-                "J_adm",
-            });
-        }
-        adm_file.write_time_data_line({L2_Madm, L2_Jadm});
-*/
-
-}
+    }
 
     if (m_p.do_star_track && m_level == m_p.star_track_level)
     {
@@ -345,7 +320,7 @@ void BBSEqualMassFixLevel::specificPostTimeStep()
         m_st_amr.m_star_tracker.execute_tracking(m_time, m_restart_time, m_dt,
                                                  write_star_coords);
 
-        if (write_star_coords && m_p.number_of_stars == 2)
+        if (write_star_coords && m_p.number_of_stars == 2 && m_p.write_relative_phase)
         {
             const auto &coords =
                 m_st_amr.m_star_tracker.get_star_coords();
@@ -372,7 +347,8 @@ void BBSEqualMassFixLevel::specificPostTimeStep()
                 dphi += two_pi;
 
             bool first_step = (m_time == m_dt);
-            SmallDataIO phase_file("relative_phase", m_dt, m_time,
+            std::string rel_phase_filename = m_p.data_path + "relative_phase";
+            SmallDataIO phase_file(rel_phase_filename, m_dt, m_time,
                                    m_restart_time, SmallDataIO::APPEND,
                                    first_step);
             phase_file.remove_duplicate_time_data();
@@ -406,13 +382,4 @@ void BBSEqualMassFixLevel::computeTaggingCriterion(
                        m_p.regrid_threshold_phi, m_p.regrid_threshold_chi,
                        m_p.activate_extraction),
                    current_state, tagging_criterion);
-    /* Pre-existing malformed call — needs constructor arguments matched to
-       BosonChiPunctureExtractionTaggingCriterion's actual signature
-       (puncture coords/masses/radii, horizon_max_levels, buffer, ...).
-       Left commented out so the file compiles; unrelated to the
-       relative-phase diagnostic added in this change.
-    BoxLoops::loop(BosonChiPunctureExtractionTaggingCriterion(
-                       m_dx, m_level, ...),
-                   current_state, tagging_criterion);
-    */
 }

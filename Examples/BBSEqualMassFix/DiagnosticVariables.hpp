@@ -31,14 +31,13 @@ namespace DiagnosticVariables
 {
 static const std::array<std::string, NUM_DIAGNOSTIC_VARS> variable_names = {
 
-    "mod_phi",
+    "mod_phi", "N",
 
-    "N",
+    "Ham", "Mom1", "Mom2", "Mom3",
 
-    "Ham",      "Mom1",    "Mom2", "Mom3",
+    "Weyl4_Re", "Weyl4_Im",
 
-    "Weyl4_Re", "Weyl4_Im"
-
+    "Madm", "Jadm"
 };
 
 }
